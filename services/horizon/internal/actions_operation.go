@@ -156,7 +156,7 @@ func (action *OperationIndexAction) loadParams() {
 	}
 	action.IncludeTransactions = parsed[joinTransactions]
 
-	filters, err := countNonEmpty(
+	filters, err := actions.CountNonEmpty(
 		action.AccountFilter,
 		action.LedgerFilter,
 		action.TransactionFilter,
@@ -173,7 +173,7 @@ func (action *OperationIndexAction) loadParams() {
 	}
 
 	// Double check TransactionFilter as it's used to determine if failed txs should be returned
-	if action.TransactionFilter != "" && !isValidTransactionHash(action.TransactionFilter) {
+	if action.TransactionFilter != "" && !actions.IsValidTransactionHash(action.TransactionFilter) {
 		action.Err = supportProblem.MakeInvalidFieldProblem("tx_id", errors.New("Invalid transaction hash"))
 		return
 	}

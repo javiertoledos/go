@@ -226,7 +226,7 @@ func (w *web) mustInstallActions(
 		r.Get("/accounts/{account_id:\\w+}/transactions", w.streamIndexActionHandler(w.getTransactionPage, w.streamTransactions))
 		r.Get("/accounts/{account_id:\\w+}/operations", OperationIndexAction{}.Handle)
 		r.Get("/accounts/{account_id:\\w+}/payments", OperationIndexAction{OnlyPayments: true}.Handle)
-		r.Get("/accounts/{account_id:\\w+}/effects", EffectIndexAction{}.Handle)
+		r.Get("/accounts/{account_id:\\w+}/effects", w.streamIndexActionHandler(w.getEffectsPage, w.streamEffects))
 		r.Get("/accounts/{account_id:\\w+}/trades", TradeIndexAction{}.Handle)
 	})
 	// ledger actions
@@ -237,7 +237,7 @@ func (w *web) mustInstallActions(
 			r.Get("/transactions", w.streamIndexActionHandler(w.getTransactionPage, w.streamTransactions))
 			r.Get("/operations", OperationIndexAction{}.Handle)
 			r.Get("/payments", OperationIndexAction{OnlyPayments: true}.Handle)
-			r.Get("/effects", EffectIndexAction{}.Handle)
+			r.Get("/effects", w.streamIndexActionHandler(w.getEffectsPage, w.streamEffects))
 		})
 	})
 
@@ -248,7 +248,7 @@ func (w *web) mustInstallActions(
 			r.Get("/", showActionHandler(w.getTransactionResource))
 			r.Get("/operations", OperationIndexAction{}.Handle)
 			r.Get("/payments", OperationIndexAction{OnlyPayments: true}.Handle)
-			r.Get("/effects", EffectIndexAction{}.Handle)
+			r.Get("/effects", w.streamIndexActionHandler(w.getEffectsPage, w.streamEffects))
 		})
 	})
 
@@ -256,7 +256,7 @@ func (w *web) mustInstallActions(
 	r.Route("/operations", func(r chi.Router) {
 		r.Get("/", OperationIndexAction{}.Handle)
 		r.Get("/{id}", OperationShowAction{}.Handle)
-		r.Get("/{op_id}/effects", EffectIndexAction{}.Handle)
+		r.Get("/{op_id}/effects", w.streamIndexActionHandler(w.getEffectsPage, w.streamEffects))
 	})
 
 	r.Group(func(r chi.Router) {
@@ -264,7 +264,7 @@ func (w *web) mustInstallActions(
 		r.Get("/payments", OperationIndexAction{OnlyPayments: true}.Handle)
 
 		// effect actions
-		r.Get("/effects", EffectIndexAction{}.Handle)
+		r.Get("/effects", w.streamIndexActionHandler(w.getEffectsPage, w.streamEffects))
 
 		// trading related endpoints
 		r.Get("/trades", TradeIndexAction{}.Handle)
