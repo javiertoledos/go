@@ -6,6 +6,7 @@ file. This project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 * Replace `SequenceProvider` implementation with one which queries the Horizon DB for sequence numbers instead of the Stellar Core DB.
+* Remove JSON variant of `GET /metrics`, both in the server and client code.
 
 ## v1.3.0
 

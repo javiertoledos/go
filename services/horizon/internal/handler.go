@@ -609,7 +609,6 @@ func buildPage(r *http.Request, records []hal.Pageable) (hal.Page, error) {
 
 type metricsAction interface {
 	PrometheusFormat(w io.Writer) error
-	GetMetricsSnapshot() map[string]interface{}
 }
 
 func HandleMetrics(action metricsAction) http.HandlerFunc {
@@ -620,11 +619,6 @@ func HandleMetrics(action metricsAction) http.HandlerFunc {
 			}
 			return
 		}
-
-		snapshot := action.GetMetricsSnapshot()
-		snapshot["_links"] = map[string]interface{}{
-			"self": hal.NewLink("/metrics"),
-		}
-		hal.Render(w, snapshot)
+		problem.Render(r.Context(), w, hProblem.NotAcceptable)
 	}
 }
