@@ -495,7 +495,7 @@ func transactionFromParsedXDR(xdrEnv xdr.TransactionEnvelope) (*GenericTransacti
 		if err != nil {
 			return newTx, errors.New("could not parse inner transaction")
 		}
-		feeBumpAccount := xdrEnv.FeeBumpAccount()
+		feeBumpAccount := xdrEnv.FeeBumpAccount().ToAccountId()
 		newTx.feeBump = &FeeBumpTransaction{
 			envelope: xdrEnv,
 			// A fee-bump transaction has an effective number of operations equal to one plus the
@@ -511,7 +511,7 @@ func transactionFromParsedXDR(xdrEnv xdr.TransactionEnvelope) (*GenericTransacti
 		return newTx, nil
 	}
 
-	sourceAccount := xdrEnv.SourceAccount()
+	sourceAccount := xdrEnv.SourceAccount().ToAccountId()
 
 	totalFee := int64(xdrEnv.Fee())
 	baseFee := totalFee
@@ -711,7 +711,7 @@ func NewFeeBumpTransaction(params FeeBumpTransactionParams) (*FeeBumpTransaction
 		)
 	}
 
-	accountID, err := xdr.AddressToMuxedAccount(tx.feeAccount)
+	accountID, err := xdr.AddressToAccountId(tx.feeAccount)
 	if err != nil {
 		return tx, errors.Wrap(err, "fee account is not a valid address")
 	}
@@ -728,7 +728,7 @@ func NewFeeBumpTransaction(params FeeBumpTransactionParams) (*FeeBumpTransaction
 		Type: xdr.EnvelopeTypeEnvelopeTypeTxFeeBump,
 		FeeBump: &xdr.FeeBumpTransactionEnvelope{
 			Tx: xdr.FeeBumpTransaction{
-				FeeSource: accountID,
+				FeeSource: accountID.ToMuxedAccount(),
 				Fee:       xdr.Int64(tx.maxFee),
 				InnerTx: xdr.FeeBumpTransactionInnerTx{
 					Type: xdr.EnvelopeTypeEnvelopeTypeTx,
@@ -824,11 +824,6 @@ func generateRandomNonce(n int) ([]byte, error) {
 	return binary, err
 }
 
-func validAccountId(address string) error {
-	var account xdr.AccountId
-	return account.SetAddress(address)
-}
-
 // ReadChallengeTx reads a SEP 10 challenge transaction and returns the decoded
 // transaction and client account ID contained within.
 //
@@ -851,11 +846,8 @@ func ReadChallengeTx(challengeTx, serverAccountID, network string) (tx *Transact
 		return tx, clientAccountID, errors.New("challenge cannot be a fee bump transaction")
 	}
 
-	// Enforce no muxed accounts (at least until we understand their impact)
-	if err = validAccountId(tx.sourceAccount.AccountID); err != nil {
-		err = errors.Wrap(err, "only valid Ed25519 accounts are allowed in challenge transactions")
-		return tx, clientAccountID, err
-	}
+	// TODO: Consider disallowing muxed account addresses (both is source and operations)
+	//       once SEP23 is supported
 
 	// verify transaction source
 	if tx.SourceAccount().AccountID != serverAccountID {
@@ -890,10 +882,6 @@ func ReadChallengeTx(challengeTx, serverAccountID, network string) (tx *Transact
 		return tx, clientAccountID, errors.New("operation should have a source account")
 	}
 	clientAccountID = op.SourceAccount.GetAccountID()
-	if err = validAccountId(clientAccountID); err != nil {
-		err = errors.Wrap(err, "only valid Ed25519 accounts are allowed in challenge transactions")
-		return tx, clientAccountID, err
-	}
 
 	// verify manage data value
 	nonceB64 := string(op.Value)

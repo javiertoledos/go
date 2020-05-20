@@ -1062,7 +1062,7 @@ func TestHashHex(t *testing.T) {
 	txEnv, err := tx.TxEnvelope()
 	assert.NoError(t, err)
 	assert.NotNil(t, txEnv, "transaction xdr envelope should not be nil")
-	sourceAccountFromEnv := txEnv.SourceAccount()
+	sourceAccountFromEnv := txEnv.SourceAccount().ToAccountId()
 	assert.Equal(t, sourceAccount.AccountID, sourceAccountFromEnv.Address())
 	assert.Equal(t, uint32(100), txEnv.Fee())
 	assert.Equal(t, sourceAccount.Sequence, int64(txEnv.SeqNum()))
@@ -2027,49 +2027,6 @@ func TestReadChallengeTx_forbidsFeeBumpTransactions(t *testing.T) {
 	)
 	assert.EqualError(t, err, "challenge cannot be a fee bump transaction")
 }
-
-func TestBuildChallengeTx_forbidsMuxedAccounts(t *testing.T) {
-	kp0 := newKeypair0()
-	_, err := BuildChallengeTx(
-		kp0.Seed(),
-		"MCAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITKNOG",
-		"SDF",
-		network.TestNetworkPassphrase,
-		time.Hour,
-	)
-	errorMessage := "MCAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITKNOG is " +
-		"not a valid account id: invalid version byte"
-	assert.EqualError(t, err, errorMessage)
-}
-
-func TestReadChallengeTx_forbidsMuxedAccounts(t *testing.T) {
-	kp0 := newKeypair0()
-	tx, err := BuildChallengeTx(
-		kp0.Seed(),
-		kp0.Address(),
-		"SDF",
-		network.TestNetworkPassphrase,
-		time.Hour,
-	)
-
-	muxedAccount := xdr.MustMuxedAccountAddress("MCAAAAAAAAAAAAB7BQ2L7E5NBWMXDUCMZSIPOBKRDSBYVLMXGSSKF6YNPIB7Y77ITKNOG")
-
-	env, err := tx.TxEnvelope()
-	assert.NoError(t, err)
-	*env.V0.Tx.Operations[0].SourceAccount = muxedAccount
-
-	challenge, err := marshallBase64(env, env.Signatures())
-	assert.NoError(t, err)
-
-	_, _, err = ReadChallengeTx(
-		challenge,
-		kp0.Address(),
-		network.TestNetworkPassphrase,
-	)
-	errorMessage := "only valid Ed25519 accounts are allowed in challenge transactions: invalid version byte"
-	assert.EqualError(t, err, errorMessage)
-}
-
 func TestVerifyChallengeTxThreshold_invalidServer(t *testing.T) {
 	serverKP := newKeypair0()
 	clientKP := newKeypair1()
