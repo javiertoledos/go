@@ -2027,6 +2027,41 @@ func TestReadChallengeTx_forbidsFeeBumpTransactions(t *testing.T) {
 	)
 	assert.EqualError(t, err, "challenge cannot be a fee bump transaction")
 }
+
+func TestReadChallengeTx_forbidsMuxedAccounts(t *testing.T) {
+	kp0 := newKeypair0()
+	tx, err := BuildChallengeTx(
+		kp0.Seed(),
+		kp0.Address(),
+		"SDF",
+		network.TestNetworkPassphrase,
+		time.Hour,
+	)
+
+	env, err := tx.TxEnvelope()
+	assert.NoError(t, err)
+	aid := xdr.MustAddress(kp0.Address())
+	muxedAccount := xdr.MuxedAccount{
+		Type: xdr.CryptoKeyTypeKeyTypeMuxedEd25519,
+		Med25519: &xdr.MuxedAccountMed25519{
+			Id:      0xcafebabe,
+			Ed25519: *aid.Ed25519,
+		},
+	}
+	*env.V0.Tx.Operations[0].SourceAccount = muxedAccount
+
+	challenge, err := marshallBase64(env, env.Signatures())
+	assert.NoError(t, err)
+
+	_, _, err = ReadChallengeTx(
+		challenge,
+		kp0.Address(),
+		network.TestNetworkPassphrase,
+	)
+	errorMessage := "only valid Ed25519 accounts are allowed in challenge transactions"
+	assert.Contains(t, err.Error(), errorMessage)
+}
+
 func TestVerifyChallengeTxThreshold_invalidServer(t *testing.T) {
 	serverKP := newKeypair0()
 	clientKP := newKeypair1()

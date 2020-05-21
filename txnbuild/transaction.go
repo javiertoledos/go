@@ -846,8 +846,11 @@ func ReadChallengeTx(challengeTx, serverAccountID, network string) (tx *Transact
 		return tx, clientAccountID, errors.New("challenge cannot be a fee bump transaction")
 	}
 
-	// TODO: Consider disallowing muxed account addresses (both is source and operations)
-	//       once SEP23 is supported
+	// Enforce no muxed accounts (at least until we understand their impact)
+	if tx.envelope.SourceAccount().Type == xdr.CryptoKeyTypeKeyTypeMuxedEd25519 {
+		err = errors.New("invalid source account: only valid Ed25519 accounts are allowed in challenge transactions")
+		return tx, clientAccountID, err
+	}
 
 	// verify transaction source
 	if tx.SourceAccount().AccountID != serverAccountID {
@@ -882,6 +885,11 @@ func ReadChallengeTx(challengeTx, serverAccountID, network string) (tx *Transact
 		return tx, clientAccountID, errors.New("operation should have a source account")
 	}
 	clientAccountID = op.SourceAccount.GetAccountID()
+	rawOperations := tx.envelope.Operations()
+	if len(rawOperations) > 0 && rawOperations[0].SourceAccount.Type == xdr.CryptoKeyTypeKeyTypeMuxedEd25519 {
+		err = errors.New("invalid operation source account: only valid Ed25519 accounts are allowed in challenge transactions")
+		return tx, clientAccountID, err
+	}
 
 	// verify manage data value
 	nonceB64 := string(op.Value)
